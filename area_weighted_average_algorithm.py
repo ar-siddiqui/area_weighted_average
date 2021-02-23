@@ -30,6 +30,9 @@ __copyright__ = "(C) 2021 by Abdul Raheem Siddiqui"
 
 __revision__ = "$Format:%H$"
 
+import os
+import inspect
+from qgis.PyQt.QtGui import QIcon
 from qgis.PyQt.QtCore import QCoreApplication
 from qgis.core import (
     QgsProcessing,
@@ -374,3 +377,8 @@ class AreaWeightedAverageAlgorithm(QgsProcessingAlgorithm):
 
     def createInstance(self):
         return AreaWeightedAverageAlgorithm()
+
+    def icon(self):
+        cmd_folder = os.path.split(inspect.getfile(inspect.currentframe()))[0]
+        icon = QIcon(os.path.join(os.path.join(cmd_folder, "logo.png")))
+        return icon

@@ -37,4 +37,4 @@ def classFactory(iface):  # pylint: disable=invalid-name
     #
     from .area_weighted_average import AreaWeightedAveragePlugin
 
-    return AreaWeightedAveragePlugin()
+    return AreaWeightedAveragePlugin(iface)

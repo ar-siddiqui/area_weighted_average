@@ -30,6 +30,11 @@ __copyright__ = "(C) 2021 by Abdul Raheem Siddiqui"
 
 __revision__ = "$Format:%H$"
 
+from qgis.PyQt.QtWidgets import QAction
+from qgis.PyQt.QtGui import QIcon
+
+from qgis.core import QgsProcessingAlgorithm, QgsApplication
+import processing
 import os
 import sys
 import inspect
@@ -44,8 +49,9 @@ if cmd_folder not in sys.path:
 
 
 class AreaWeightedAveragePlugin(object):
-    def __init__(self):
+    def __init__(self, iface):
         self.provider = None
+        self.iface = iface
 
     def initProcessing(self):
         """Init Processing provider for QGIS >= 3.8."""
@@ -55,5 +61,16 @@ class AreaWeightedAveragePlugin(object):
     def initGui(self):
         self.initProcessing()
 
+        icon = os.path.join(os.path.join(cmd_folder, "logo.png"))
+        self.action = QAction(
+            QIcon(icon), u"Area Weighted Average", self.iface.mainWindow()
+        )
+        self.action.triggered.connect(self.run)
+        self.iface.addPluginToMenu(u"&Area Weighted Average", self.action)
+
     def unload(self):
         QgsApplication.processingRegistry().removeProvider(self.provider)
+        self.iface.removePluginMenu(u"&Area Weighted Average", self.action)
+
+    def run(self):
+        processing.execAlgorithmDialog("Area Weighted Average:Area Weighted Average")
