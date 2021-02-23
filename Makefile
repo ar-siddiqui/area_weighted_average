@@ -1,7 +1,7 @@
 #/***************************************************************************
-# WeightedAverageAnalysis
+# AreaWeightedAverage
 #
-# Area Weighted Average Analysis.
+# Area Area Weighted Average.
 #							 -------------------
 #		begin				: 2021-02-21
 #		git sha				: $Format:%H$
@@ -38,13 +38,13 @@ LOCALES =
 # translation
 SOURCES = \
 	__init__.py \
-	weighted_average_analysis.py 
+	area_weighted_average.py 
 
-PLUGINNAME = weighted_average_analysis
+PLUGINNAME = area_weighted_average
 
 PY_FILES = \
 	__init__.py \
-	weighted_average_analysis.py 
+	area_weighted_average.py 
 
 UI_FILES = 
 

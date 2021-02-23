@@ -1,7 +1,7 @@
 Plugin Builder Results
 
-Your plugin WeightedAverageAnalysis was created in:
-    C:/Users/abdul/Documents\weighted_average_analysis
+Your plugin AreaWeightedAverage was created in:
+    C:/Users/abdul/Documents\area_weighted_average
 
 Your QGIS plugin directory is located at:
     C:/Users/abdul/AppData/Roaming/QGIS/QGIS3/profiles/default/python/plugins
@@ -15,7 +15,7 @@ What's Next:
 
   * Test the plugin by enabling it in the QGIS plugin manager
 
-  * Customize it by editing the implementation file: ``weighted_average_analysis.py``
+  * Customize it by editing the implementation file: ``area_weighted_average.py``
 
   * You can use the Makefile to compile your Ui and resource files when
     you make changes. This requires GNU make (gmake)

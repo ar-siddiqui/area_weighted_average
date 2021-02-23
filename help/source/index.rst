@@ -1,9 +1,9 @@
-.. WeightedAverageAnalysis documentation master file, created by
+.. AreaWeightedAverage documentation master file, created by
    sphinx-quickstart on Sun Feb 12 17:11:03 2012.
    You can adapt this file completely to your liking, but it should at least
    contain the root `toctree` directive.
 
-Welcome to WeightedAverageAnalysis's documentation!
+Welcome to AreaWeightedAverage's documentation!
 ============================================
 
 Contents:
