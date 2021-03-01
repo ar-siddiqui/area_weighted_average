@@ -32,6 +32,7 @@ __revision__ = "$Format:%H$"
 
 import os
 import inspect
+import processing
 from qgis.PyQt.QtGui import QIcon
 from qgis.PyQt.QtCore import QCoreApplication
 from qgis.core import (
@@ -43,6 +44,9 @@ from qgis.core import (
     QgsProcessingParameterVectorLayer,
     QgsProcessingParameterField,
     QgsProcessingParameterBoolean,
+    QgsProcessingMultiStepFeedback,
+    QgsProcessingParameterDefinition,
+    QgsProcessingParameterFileDestination,
 )
 
 
@@ -84,17 +88,19 @@ class AreaWeightedAverageAlgorithm(QgsProcessingAlgorithm):
                 defaultValue=None,
             )
         )
-        self.addParameter(
-            QgsProcessingParameterField(
-                "IDFieldMustnothaveduplicates",
-                "ID Field [Must not have duplicates]",
-                optional=True,
-                type=QgsProcessingParameterField.Any,
-                parentLayerParameterName="inputlayer",
-                allowMultiple=False,
-                defaultValue="",
-            )
+
+        param = QgsProcessingParameterField(
+            "identifierfieldforreport",
+            "Identifier Field for Report",
+            optional=True,
+            type=QgsProcessingParameterField.Any,
+            parentLayerParameterName="inputlayer",
+            allowMultiple=False,
+            defaultValue="",
         )
+        param.setFlags(param.flags() | QgsProcessingParameterDefinition.FlagAdvanced)
+        self.addParameter(param)
+
         self.addParameter(
             QgsProcessingParameterField(
                 "fieldtoaverage",
@@ -105,50 +111,44 @@ class AreaWeightedAverageAlgorithm(QgsProcessingAlgorithm):
                 defaultValue=None,
             )
         )
-        self.addParameter(
-            QgsProcessingParameterField(
-                "AdditionalFields",
-                "Additional Fields to keep for HTML Table",
-                optional=True,
-                type=QgsProcessingParameterField.Any,
-                parentLayerParameterName="overlaylayer",
-                allowMultiple=True,
-            )
+
+        param = QgsProcessingParameterField(
+            "additionalfields",
+            "Additional Fields to Keep for Report",
+            optional=True,
+            type=QgsProcessingParameterField.Any,
+            parentLayerParameterName="overlaylayer",
+            allowMultiple=True,
         )
-        self.addParameter(
-            QgsProcessingParameterBoolean(
-                "VERBOSE_LOG", "Verbose logging", optional=True, defaultValue=False
-            )
-        )
+        param.setFlags(param.flags() | QgsProcessingParameterDefinition.FlagAdvanced)
+        self.addParameter(param)
+
         self.addParameter(
             QgsProcessingParameterFeatureSink(
                 "result",
                 "Result",
                 type=QgsProcessing.TypeVectorAnyGeometry,
                 createByDefault=True,
-                supportsAppend=True,
                 defaultValue=None,
             )
         )
         self.addParameter(
             QgsProcessingParameterFeatureSink(
-                "Intersected",
-                "Intersected",
+                "reportaslayer",
+                "Report as Layer",
                 type=QgsProcessing.TypeVectorAnyGeometry,
                 createByDefault=True,
-                supportsAppend=True,
                 defaultValue=None,
             )
         )
+
         self.addParameter(
-            QgsProcessingParameterField(
-                "NameorID",  # to do: reduce name length
-                "Name or ID Field [Must not have duplicates]",
-                optional=True,
-                type=QgsProcessingParameterField.Any,
-                parentLayerParameterName="inputlayer",
-                allowMultiple=False,
-                defaultValue="",
+            QgsProcessingParameterFileDestination(
+                "ReportasHTML",
+                self.tr("Report as HTML"),
+                self.tr("HTML files (*.html)"),
+                None,
+                True,
             )
         )
 
@@ -161,7 +161,7 @@ class AreaWeightedAverageAlgorithm(QgsProcessingAlgorithm):
 
         # add_ID_field to input layer
         alg_params = {
-            "FIELD_NAME": "__Unique_ID__",
+            "FIELD_NAME": "F_ID",
             "GROUP_FIELDS": [""],
             "INPUT": parameters["inputlayer"],
             "SORT_ASCENDING": True,
@@ -185,7 +185,7 @@ class AreaWeightedAverageAlgorithm(QgsProcessingAlgorithm):
         # add_area_field to input layer
         alg_params = {
             "FIELD_LENGTH": 0,
-            "FIELD_NAME": "__Area_SPW__",
+            "FIELD_NAME": "Area_AWA",
             "FIELD_PRECISION": 0,
             "FIELD_TYPE": 0,
             "FORMULA": "area($geometry)",
@@ -193,7 +193,7 @@ class AreaWeightedAverageAlgorithm(QgsProcessingAlgorithm):
             "OUTPUT": QgsProcessing.TEMPORARY_OUTPUT,
         }
         outputs["Add_area_field"] = processing.run(
-            "native:fieldcalculator",
+            "qgis:fieldcalculator",
             alg_params,
             context=context,
             feedback=feedback,
@@ -204,13 +204,34 @@ class AreaWeightedAverageAlgorithm(QgsProcessingAlgorithm):
         if feedback.isCanceled():
             return {}
 
+        # dissolve all overlay fields so as not to repeat record in reporting
+        alg_params = {
+            "FIELD": [parameters["fieldtoaverage"]]
+            + [
+                field
+                for field in parameters["additionalfields"]
+                if field != str(parameters["fieldtoaverage"])
+            ],
+            "INPUT": parameters["overlaylayer"],
+            "OUTPUT": QgsProcessing.TEMPORARY_OUTPUT,
+        }
+        outputs["Dissolve"] = processing.run(
+            "native:dissolve",
+            alg_params,
+            context=context,
+            feedback=feedback,
+            is_child_algorithm=True,
+        )
+
         # intersection between input and overlay layer
+        # delete no field in input layer and all fields in overlay layer
+        # except field to average and additional fields
         alg_params = {
             "INPUT": outputs["Add_area_field"]["OUTPUT"],
             "INPUT_FIELDS": [""],
-            "OVERLAY": parameters["overlaylayer"],
+            "OVERLAY": outputs["Dissolve"]["OUTPUT"],
             "OVERLAY_FIELDS": [str(parameters["fieldtoaverage"])]
-            + parameters["AdditionalFields"],
+            + parameters["additionalfields"],
             "OVERLAY_FIELDS_PREFIX": "",
             "OUTPUT": QgsProcessing.TEMPORARY_OUTPUT,
         }
@@ -234,11 +255,10 @@ class AreaWeightedAverageAlgorithm(QgsProcessingAlgorithm):
             "FIELD_TYPE": 0,
             "FORMULA": ' "' + parameters["fieldtoaverage"] + '"  *  area($geometry)',
             "INPUT": outputs["Intersection"]["OUTPUT"],
-            "OUTPUT": parameters["Intersected"]
-            #'OUTPUT': QgsProcessing.TEMPORARY_OUTPUT
+            "OUTPUT": QgsProcessing.TEMPORARY_OUTPUT,
         }
         outputs["Add_Weight"] = processing.run(
-            "native:fieldcalculator",
+            "qgis:fieldcalculator",
             alg_params,
             context=context,
             feedback=feedback,
@@ -256,12 +276,12 @@ class AreaWeightedAverageAlgorithm(QgsProcessingAlgorithm):
             "FIELD_PRECISION": 0,
             "FIELD_TYPE": 0,
             "FORMULA": ' sum("' + parameters["fieldtoaverage"] + "_Area"
-            '","__Unique_ID__")/"__Area_SPW__"',
+            '","F_ID")/"Area_AWA"',
             "INPUT": outputs["Add_Weight"]["OUTPUT"],
             "OUTPUT": QgsProcessing.TEMPORARY_OUTPUT,
         }
         outputs["area_average"] = processing.run(
-            "native:fieldcalculator",
+            "qgis:fieldcalculator",
             alg_params,
             context=context,
             feedback=feedback,
@@ -272,13 +292,13 @@ class AreaWeightedAverageAlgorithm(QgsProcessingAlgorithm):
         if feedback.isCanceled():
             return {}
 
-        # Dissolve
+        # remerge input layer elements
         alg_params = {
-            "FIELD": ["__Unique_ID__"],
+            "FIELD": ["F_ID"],
             "INPUT": outputs["area_average"]["OUTPUT"],
             "OUTPUT": QgsProcessing.TEMPORARY_OUTPUT,
         }
-        outputs["Dissolve"] = processing.run(
+        outputs["Dissolve2"] = processing.run(
             "native:dissolve",
             alg_params,
             context=context,
@@ -292,49 +312,128 @@ class AreaWeightedAverageAlgorithm(QgsProcessingAlgorithm):
 
         input_layer = self.parameterAsVectorLayer(parameters, "inputlayer", context)
         result_name = input_layer.name() + "_" + parameters["fieldtoaverage"]
-
         parameters["result"].destinationName = result_name
+
+        # drop field(s) for Result
+        #
+        alg_params = {
+            "COLUMN": ["F_ID", "Area_AWA"]
+            + [parameters["fieldtoaverage"]]
+            + [
+                field
+                for field in parameters["additionalfields"]
+                if field != str(parameters["fieldtoaverage"])
+            ]
+            + [parameters["fieldtoaverage"] + "_Area"],
+            "INPUT": outputs["Dissolve2"]["OUTPUT"],
+            "OUTPUT": parameters["result"],
+        }
+        outputs["Drop1"] = processing.run(
+            "qgis:deletecolumn",
+            alg_params,
+            context=context,
+            feedback=feedback,
+            is_child_algorithm=True,
+        )
+        results["result"] = outputs["Drop1"]["OUTPUT"]
+
+        # Reporting
 
         # in input layer for 'Drop field(s) for Report' add Area and area as %
 
-        # Drop field(s) for Report
-        alg_params = {
-            "COLUMN": ["__Unique_ID__", "__Area_SPW__"]
-            + [
-                parameters["fieldtoaverage"]
-            ]  # to do: drop all fields in input layer except id field
-            + [parameters["fieldtoaverage"] + "_Area"],
-            "INPUT": outputs["Add_Weight"]["OUTPUT"],
-            "OUTPUT": parameters["result"],
-        }
-        outputs[result_name] = processing.run(
-            "qgis:deletecolumn",
-            alg_params,
-            context=context,
-            feedback=feedback,
-            is_child_algorithm=True,
-        )
-        outputs[result_name]["OUTPUT"] = result_name
-        results["result"] = outputs[result_name]["OUTPUT"]
+        # # Drop field(s) for Report
 
-        # Drop field(s) for Result
-        alg_params = {
-            "COLUMN": ["__Unique_ID__", "__Area_SPW__"]
+        int_layer = context.takeResultLayer(outputs["Add_Weight"]["OUTPUT"])
+        all_fields = [f.name() for f in int_layer.fields()]
+        fields_to_keep = (
+            ["F_ID"]
+            + [
+                field
+                for field in parameters["additionalfields"]
+                if field != str(parameters["fieldtoaverage"])
+            ]
             + [parameters["fieldtoaverage"]]
-            + parameters["AdditionalFields"]
-            + [parameters["fieldtoaverage"] + "_Area"],
-            "INPUT": outputs["Dissolve"]["OUTPUT"],
-            "OUTPUT": parameters["result"],
+            + [parameters["identifierfieldforreport"]]
+        )
+        fields_to_drop = [f for f in all_fields if f not in fields_to_keep]
+        alg_params = {
+            "COLUMN": fields_to_drop,
+            "INPUT": int_layer,
+            "OUTPUT": QgsProcessing.TEMPORARY_OUTPUT,
         }
-        outputs[result_name] = processing.run(
+        outputs["Drop2"] = processing.run(
             "qgis:deletecolumn",
             alg_params,
             context=context,
             feedback=feedback,
             is_child_algorithm=True,
         )
-        outputs[result_name]["OUTPUT"] = result_name
-        results["result"] = outputs[result_name]["OUTPUT"]
+
+        feedback.setCurrentStep(2)
+        if feedback.isCanceled():
+            return {}
+
+        # update area
+        alg_params = {
+            "FIELD_LENGTH": 0,
+            "FIELD_NAME": "Area_CRS_Units",
+            "FIELD_PRECISION": 0,
+            "FIELD_TYPE": 0,
+            "FORMULA": "area($geometry)",
+            "INPUT": outputs["Drop2"]["OUTPUT"],
+            "OUTPUT": QgsProcessing.TEMPORARY_OUTPUT,
+        }
+        outputs["update_area"] = processing.run(
+            "qgis:fieldcalculator",
+            alg_params,
+            context=context,
+            feedback=feedback,
+            is_child_algorithm=True,
+        )
+
+        feedback.setCurrentStep(6)
+        if feedback.isCanceled():
+            return {}
+
+        parameters["reportaslayer"].destinationName = "Report as Layer"
+        # add area %
+        alg_params = {
+            "FIELD_LENGTH": 0,
+            "FIELD_NAME": "Area_Prcnt",
+            "FIELD_PRECISION": 0,
+            "FIELD_TYPE": 0,
+            "FORMULA": ' "Area_CRS_Units" *100/  sum(  "Area_CRS_Units" ,  "F_ID" )',
+            "INPUT": outputs["update_area"]["OUTPUT"],
+            "OUTPUT": parameters["reportaslayer"],
+        }
+        outputs["area_prcnt"] = processing.run(
+            "qgis:fieldcalculator",
+            alg_params,
+            context=context,
+            feedback=feedback,
+            is_child_algorithm=True,
+        )
+
+        feedback.setCurrentStep(7)
+        if feedback.isCanceled():
+            return {}
+
+        results["reportaslayer"] = outputs["area_prcnt"]["OUTPUT"]
+
+        # Drop geometries
+
+        alg_params = {
+            "INPUT": outputs["Add_Weight"]["OUTPUT"],
+            "OUTPUT": parameters["ReportasTable"],
+        }
+        outputs["DropGeometries"] = processing.run(
+            "native:dropgeometries",
+            alg_params,
+            context=context,
+            feedback=feedback,
+            is_child_algorithm=True,
+        )
+        results["ReportasTable"] = outputs["DropGeometries"]["OUTPUT"]
 
         return results
 

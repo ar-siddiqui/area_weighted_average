@@ -75,7 +75,6 @@ class WeightedAverage(QgsProcessingAlgorithm):
                 "Result",
                 type=QgsProcessing.TypeVectorAnyGeometry,
                 createByDefault=True,
-                supportsAppend=True,
                 defaultValue=None,
             )
         )
@@ -85,7 +84,6 @@ class WeightedAverage(QgsProcessingAlgorithm):
                 "Intersected",
                 type=QgsProcessing.TypeVectorAnyGeometry,
                 createByDefault=True,
-                supportsAppend=True,
                 defaultValue=None,
             )
         )
