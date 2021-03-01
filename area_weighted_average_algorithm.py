@@ -31,6 +31,7 @@ __copyright__ = "(C) 2021 by Abdul Raheem Siddiqui"
 __revision__ = "$Format:%H$"
 
 import os
+import tempfile
 import inspect
 import processing
 from qgis.PyQt.QtGui import QIcon
@@ -47,7 +48,16 @@ from qgis.core import (
     QgsProcessingMultiStepFeedback,
     QgsProcessingParameterDefinition,
     QgsProcessingParameterFileDestination,
+    QgsVectorFileWriter,
 )
+
+try:
+    import pandas as pd
+except ImportError:
+    import pip
+
+    pip.main(["install", "pandas"])
+    import pandas as pd
 
 
 class AreaWeightedAverageAlgorithm(QgsProcessingAlgorithm):
@@ -423,8 +433,8 @@ class AreaWeightedAverageAlgorithm(QgsProcessingAlgorithm):
         # Drop geometries
 
         alg_params = {
-            "INPUT": outputs["Add_Weight"]["OUTPUT"],
-            "OUTPUT": parameters["ReportasTable"],
+            "INPUT": outputs["area_prcnt"]["OUTPUT"],
+            "OUTPUT": QgsProcessing.TEMPORARY_OUTPUT,
         }
         outputs["DropGeometries"] = processing.run(
             "native:dropgeometries",
@@ -433,7 +443,20 @@ class AreaWeightedAverageAlgorithm(QgsProcessingAlgorithm):
             feedback=feedback,
             is_child_algorithm=True,
         )
-        results["ReportasTable"] = outputs["DropGeometries"]["OUTPUT"]
+
+        with tempfile.TemporaryDirectory() as td:
+            f_name = os.path.join(td, "report_html.csv")
+
+            report_layer = context.takeResultLayer(outputs["DropGeometries"]["OUTPUT"])
+
+            QgsVectorFileWriter.writeAsVectorFormat(
+                report_layer,
+                f_name,
+                fileEncoding="utf-8",
+                driverName="CSV",
+            )
+            data = pd.read_csv(f_name)
+            feedback.pushInfo(data.head().to_string())
 
         return results
 
