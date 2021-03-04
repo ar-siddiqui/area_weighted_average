@@ -34,6 +34,9 @@ import os
 import tempfile
 import inspect
 import processing
+import codecs
+
+from tempfile import NamedTemporaryFile
 from qgis.PyQt.QtGui import QIcon
 from qgis.PyQt.QtCore import QCoreApplication
 from qgis.core import (
@@ -50,14 +53,6 @@ from qgis.core import (
     QgsProcessingParameterFileDestination,
     QgsVectorFileWriter,
 )
-
-try:
-    import pandas as pd
-except ImportError:
-    import pip
-
-    pip.main(["install", "pandas"])
-    import pandas as pd
 
 
 class AreaWeightedAverageAlgorithm(QgsProcessingAlgorithm):
@@ -154,13 +149,21 @@ class AreaWeightedAverageAlgorithm(QgsProcessingAlgorithm):
 
         self.addParameter(
             QgsProcessingParameterFileDestination(
-                "ReportasHTML",
+                "reportasHTML",
                 self.tr("Report as HTML"),
                 self.tr("HTML files (*.html)"),
                 None,
                 True,
             )
         )
+
+        # read usage
+        with open(os.path.join(cmd_folder, "usage_counter.log"), "r") as f:
+            counter = int(f.readline())
+
+        # check if counter is milestone
+        if (counter + 1) % 25 == 0:
+            self.addOutput(QgsProcessingOutputHtml("Message", "Area Weighted Average"))
 
     def processAlgorithm(self, parameters, context, model_feedback):
         # Use a multi-step feedback, so that individual child algorithm progress reports are adjusted for the
@@ -177,7 +180,7 @@ class AreaWeightedAverageAlgorithm(QgsProcessingAlgorithm):
             "SORT_ASCENDING": True,
             "SORT_EXPRESSION": "",
             "SORT_NULLS_FIRST": False,
-            "START": 0,
+            "START": 1,
             "OUTPUT": QgsProcessing.TEMPORARY_OUTPUT,
         }
         outputs["Add_id_field"] = processing.run(
@@ -280,9 +283,10 @@ class AreaWeightedAverageAlgorithm(QgsProcessingAlgorithm):
             return {}
 
         # area_average
+        weighted_field = "Weighted_" + parameters["fieldtoaverage"]
         alg_params = {
             "FIELD_LENGTH": 0,
-            "FIELD_NAME": "Weighted_" + parameters["fieldtoaverage"],
+            "FIELD_NAME": weighted_field,
             "FIELD_PRECISION": 0,
             "FIELD_TYPE": 0,
             "FORMULA": ' sum("' + parameters["fieldtoaverage"] + "_Area"
@@ -353,10 +357,10 @@ class AreaWeightedAverageAlgorithm(QgsProcessingAlgorithm):
 
         # # Drop field(s) for Report
 
-        int_layer = context.takeResultLayer(outputs["Add_Weight"]["OUTPUT"])
+        int_layer = context.takeResultLayer(outputs["area_average"]["OUTPUT"])
         all_fields = [f.name() for f in int_layer.fields()]
         fields_to_keep = (
-            ["F_ID"]
+            ["F_ID", weighted_field]
             + [
                 field
                 for field in parameters["additionalfields"]
@@ -430,33 +434,107 @@ class AreaWeightedAverageAlgorithm(QgsProcessingAlgorithm):
 
         results["reportaslayer"] = outputs["area_prcnt"]["OUTPUT"]
 
-        # Drop geometries
+        output_file = self.parameterAsFileOutput(parameters, "reportasHTML", context)
 
-        alg_params = {
-            "INPUT": outputs["area_prcnt"]["OUTPUT"],
-            "OUTPUT": QgsProcessing.TEMPORARY_OUTPUT,
-        }
-        outputs["DropGeometries"] = processing.run(
-            "native:dropgeometries",
-            alg_params,
-            context=context,
-            feedback=feedback,
-            is_child_algorithm=True,
-        )
+        # create HTML report
+        if output_file:
 
-        with tempfile.TemporaryDirectory() as td:
-            f_name = os.path.join(td, "report_html.csv")
+            try:
+                try:
+                    import pandas as pd
+                except ImportError:
+                    import pathlib as pl
+                    import subprocess
+                    import sys
 
-            report_layer = context.takeResultLayer(outputs["DropGeometries"]["OUTPUT"])
+                    qgis_Path = pl.Path(sys.executable)
+                    qgis_python_path = (qgis_Path.parent / "python3.exe").as_posix()
 
-            QgsVectorFileWriter.writeAsVectorFormat(
-                report_layer,
-                f_name,
-                fileEncoding="utf-8",
-                driverName="CSV",
+                    subprocess.check_call(
+                        [qgis_python_path, "-m", "pip", "install", "--user", "pandas"]
+                    )
+                    import pandas as pd
+
+                    feedback.pushInfo(
+                        "python library pandas was installed for qgis python"
+                    )
+            except:
+                feedback.reportError(
+                    "Failed to import pandas. Tried installing pandas but failed.\nPlease manually install pandas for the python that comes with your QGIS.",
+                    True,
+                )
+                return results
+
+            # Drop geometries
+            alg_params = {
+                "INPUT": outputs["area_prcnt"]["OUTPUT"],
+                "OUTPUT": QgsProcessing.TEMPORARY_OUTPUT,
+            }
+            outputs["DropGeometries"] = processing.run(
+                "native:dropgeometries",
+                alg_params,
+                context=context,
+                feedback=feedback,
+                is_child_algorithm=True,
             )
-            data = pd.read_csv(f_name)
-            feedback.pushInfo(data.head().to_string())
+
+            with tempfile.TemporaryDirectory() as td:
+                f_name = os.path.join(td, "report_df.csv")
+
+                report_layer = context.takeResultLayer(
+                    outputs["DropGeometries"]["OUTPUT"]
+                )
+
+                QgsVectorFileWriter.writeAsVectorFormat(
+                    report_layer,
+                    f_name,
+                    fileEncoding="utf-8",
+                    driverName="CSV",
+                )
+                df = pd.read_csv(f_name)
+
+            total_FIDs = df["F_ID"].max()
+
+            ident_name = parameters["identifierfieldforreport"]
+            weighted_field = "Weighted_" + parameters["fieldtoaverage"]
+            html = ""
+            for i in range(1, total_FIDs):
+                df_sub = df.loc[df["F_ID"] == i]
+                df_sub.reset_index(inplace=True, drop=True)
+                avg_value = df_sub.at[0, weighted_field]
+                if ident_name:
+                    feature_name = df_sub.at[0, ident_name]
+                    df_sub.drop(
+                        columns=["F_ID", ident_name, weighted_field], inplace=True
+                    )
+                    html += f"<p><b>{i}. {feature_name}</b><br>{weighted_field}: {avg_value}<br>Count of intersecting features: {len(df_sub.index)}<br></p>\n"
+                else:
+                    df_sub.drop(columns=["F_ID", weighted_field], inplace=True)
+                    html += f"<p><b>Feature ID: {i}</b><br>{weighted_field}: {avg_value}<br>Count of intersecting features: {len(df_sub.index)}<br></p>\n"
+                html += f"{df_sub.to_html(bold_rows=False, index=False)}<br>\n"
+
+                with codecs.open(output_file, "w", encoding="utf-8") as f:
+                    f.write("<html><head>\n")
+                    f.write(
+                        '<meta http-equiv="Content-Type" content="text/html; \
+                            charset=utf-8" /></head><body>\n'
+                    )
+                    f.write(html)
+                    f.write("</body></html>\n")
+
+                results["reportasHTML"] = output_file
+
+        # log usage
+        with open(os.path.join(cmd_folder, "usage_counter.log"), "r+") as f:
+            counter = int(f.readline())
+            f.seek(0)
+            f.write(str(counter + 1))
+
+        # check if counter is a milestone
+        if (counter + 1) % 25 == 0:
+            appeal_file = NamedTemporaryFile("w", suffix=".html", delete=False)
+            self.createHTML(appeal_file.name, counter + 1)
+            results["Message"] = appeal_file.name
 
         return results
 
@@ -504,3 +582,33 @@ class AreaWeightedAverageAlgorithm(QgsProcessingAlgorithm):
         cmd_folder = os.path.split(inspect.getfile(inspect.currentframe()))[0]
         icon = QIcon(os.path.join(os.path.join(cmd_folder, "logo.png")))
         return icon
+
+    def createHTML(self, outputFile, counter):
+        with codecs.open(outputFile, "w", encoding="utf-8") as f:
+            f.write(
+                f"""
+<html>
+
+<head>
+    <meta http-equiv="Content-Type" content="text/html;charset=utf-8" />
+</head>
+
+<body>
+    <p style="font-size:21px;line-height: 1.5;text-align:center;"><br>WOW! You have used the Area Weighted Average
+        Plugin <b>{counter}</b>
+        times already.<br />If you would like to get any GIS task automated for your organization please contact me at
+        ars.work.ce@gmail.com<br />
+        If this plugin has saved your time, please consider making a personal or organizational donation of any value to the developer.</p>
+    <br>
+    <form action="https://www.paypal.com/donate" method="post" target="_top" style="text-align: center;">
+        <input type="hidden" name="business" value="T25JMRWJAL5SQ" />
+        <input type="hidden" name="item_name" value="For Curve Number Generator" />
+        <input type="hidden" name="currency_code" value="USD" />
+        <input type="image" src="https://www.paypalobjects.com/en_US/i/btn/btn_donateCC_LG.gif" border="0" name="submit"
+            title="PayPal - The safer, easier way to pay online!" alt="Donate with PayPal button" />
+        <img alt="" border="0" src="https://www.paypal.com/en_US/i/scr/pixel.gif" width="1" height="1" />
+    </form>
+</body>
+
+</html>"""
+            )
