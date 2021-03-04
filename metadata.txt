@@ -5,12 +5,12 @@
 [general]
 name=Area Weighted Average
 qgisMinimumVersion=3.6
-description=Area Area Weighted Average.
+description=Area Weighted Average.
 version=0.1
 author=Abdul Raheem Siddiqui
 email=ars.work.ce@gmail.com
 
-about=Given an input polygon layer and overlay polygon layer, calculate weighted average of overlay parameters on input layer and generate report.
+about=This plugin performs spatial area weighted average analysis on an input polygon layer given an attribute in the overlay polygon layer. Each feature in the input layer will be assigned a spatial area weighted average value of the overlay field. A report of the analysis is generated as a GIS Layer and as HTML.
 
 tracker=https://github.com/ar-siddiqui/area_weighted_average/issues
 repository=https://github.com/ar-siddiqui/area_weighted_average
@@ -23,7 +23,7 @@ hasProcessingProvider=yes
 # changelog=
 
 # Tags are comma separated with spaces allowed
-tags=weighted, spatial, average, mean, analysis, report, overlap, spatial join
+tags=weighted, spatial, average, mean, analysis, report, overlap, spatial join, area, mean
 
 homepage=https://github.com/ar-siddiqui/area_weighted_average
 category=Analysis

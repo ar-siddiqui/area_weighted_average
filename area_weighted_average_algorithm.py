@@ -510,9 +510,9 @@ class AreaWeightedAverageAlgorithm(QgsProcessingAlgorithm):
                 is_child_algorithm=True,
             )
 
-        feedback.setCurrentStep(13)
-        if feedback.isCanceled():
-            return {}
+            feedback.setCurrentStep(13)
+            if feedback.isCanceled():
+                return {}
 
             with tempfile.TemporaryDirectory() as td:
                 f_name = os.path.join(td, "report_df.csv")
@@ -550,7 +550,7 @@ class AreaWeightedAverageAlgorithm(QgsProcessingAlgorithm):
                 else:
                     df_sub.drop(columns=["input_feat_id", weighted_field], inplace=True)
                     html += f"<p><b>Feature ID: {i}</b><br>{weighted_field}: {avg_value}<br>count of distinct intersecting features: {len(df_sub.index)}<br></p>\n"
-                html += f"{df_sub.to_html(bold_rows=False, index=False, justify='left')}<br>\n"
+                html += f"{df_sub.to_html(bold_rows=False, index=False, na_rep='Null',justify='left')}<br>\n"
 
                 with codecs.open(output_file, "w", encoding="utf-8") as f:
                     f.write("<html><head>\n")
@@ -667,7 +667,7 @@ class AreaWeightedAverageAlgorithm(QgsProcessingAlgorithm):
     <br>
     <form action="https://www.paypal.com/donate" method="post" target="_top" style="text-align: center;">
         <input type="hidden" name="business" value="T25JMRWJAL5SQ" />
-        <input type="hidden" name="item_name" value="For Curve Number Generator" />
+        <input type="hidden" name="item_name" value="For Area Weighted Average Plugin" />
         <input type="hidden" name="currency_code" value="USD" />
         <input type="image" src="https://www.paypalobjects.com/en_US/i/btn/btn_donateCC_LG.gif" border="0" name="submit"
             title="PayPal - The safer, easier way to pay online!" alt="Donate with PayPal button" />
