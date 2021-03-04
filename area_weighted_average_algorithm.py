@@ -31,6 +31,7 @@ __copyright__ = "(C) 2021 by Abdul Raheem Siddiqui"
 __revision__ = "$Format:%H$"
 
 import os
+import sys
 import tempfile
 import inspect
 import processing
@@ -53,6 +54,9 @@ from qgis.core import (
     QgsProcessingParameterFileDestination,
     QgsVectorFileWriter,
 )
+
+cmd_folder = os.path.split(inspect.getfile(inspect.currentframe()))[0]
+sys.path.append(cmd_folder)
 
 
 class AreaWeightedAverageAlgorithm(QgsProcessingAlgorithm):
@@ -445,7 +449,6 @@ class AreaWeightedAverageAlgorithm(QgsProcessingAlgorithm):
                 except ImportError:
                     import pathlib as pl
                     import subprocess
-                    import sys
 
                     qgis_Path = pl.Path(sys.executable)
                     qgis_python_path = (qgis_Path.parent / "python3.exe").as_posix()
