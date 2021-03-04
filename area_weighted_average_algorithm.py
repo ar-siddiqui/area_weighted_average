@@ -643,7 +643,12 @@ class AreaWeightedAverageAlgorithm(QgsProcessingAlgorithm):
 <p>Report as a GIS layer.</p>
 <h3>Report as HTML [optional]</h3>
 <p>Report containing feature-wise breakdown of the analysis.</p>
-<br><p align="right">Algorithm author: Abdul Raheem Siddiqui</p><p align="right">Help author: Abdul Raheem Siddiqui</p><p align="right">Algorithm version: 0.1</p><p align="right">Contact email: ars.work.ce@gmail.com</p></body></html>"""
+<p align="right">Algorithm author: Abdul Raheem Siddiqui</p>
+<p align="right">Help author: Abdul Raheem Siddiqui</p>
+<p align="right">Algorithm version: 0.1</p>
+<p align="right">Contact email: ars.work.ce@gmail.com</p>
+<p>** If the python library pandas is not installed on the QGIS installation of python; this algorithm will try to install pandas library to the QGIS installation of python.</p>
+</body></html>"""
 
     def helpUrl(self):
         return "mailto:ars.work.ce@gmail.com"
