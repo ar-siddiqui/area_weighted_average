@@ -53,6 +53,7 @@ from qgis.core import (
     QgsProcessingParameterDefinition,
     QgsProcessingParameterFileDestination,
     QgsVectorFileWriter,
+    QgsProcessingOutputHtml,
 )
 
 cmd_folder = os.path.split(inspect.getfile(inspect.currentframe()))[0]
@@ -178,7 +179,7 @@ class AreaWeightedAverageAlgorithm(QgsProcessingAlgorithm):
 
         # add_ID_field to input layer
         alg_params = {
-            "FIELD_NAME": "F_ID",
+            "FIELD_NAME": "input_feat_id",
             "GROUP_FIELDS": [""],
             "INPUT": parameters["inputlayer"],
             "SORT_ASCENDING": True,
@@ -202,7 +203,7 @@ class AreaWeightedAverageAlgorithm(QgsProcessingAlgorithm):
         # add_area_field to input layer
         alg_params = {
             "FIELD_LENGTH": 0,
-            "FIELD_NAME": "Area_AWA",
+            "FIELD_NAME": "area_awa",
             "FIELD_PRECISION": 0,
             "FIELD_TYPE": 0,
             "FORMULA": "area($geometry)",
@@ -267,7 +268,7 @@ class AreaWeightedAverageAlgorithm(QgsProcessingAlgorithm):
         # add_Weight
         alg_params = {
             "FIELD_LENGTH": 0,
-            "FIELD_NAME": parameters["fieldtoaverage"] + "_Area",
+            "FIELD_NAME": parameters["fieldtoaverage"] + "_area",
             "FIELD_PRECISION": 0,
             "FIELD_TYPE": 0,
             "FORMULA": ' "' + parameters["fieldtoaverage"] + '"  *  area($geometry)',
@@ -287,14 +288,14 @@ class AreaWeightedAverageAlgorithm(QgsProcessingAlgorithm):
             return {}
 
         # area_average
-        weighted_field = "Weighted_" + parameters["fieldtoaverage"]
+        weighted_field = "weighted_" + parameters["fieldtoaverage"]
         alg_params = {
             "FIELD_LENGTH": 0,
             "FIELD_NAME": weighted_field,
             "FIELD_PRECISION": 0,
             "FIELD_TYPE": 0,
-            "FORMULA": ' sum("' + parameters["fieldtoaverage"] + "_Area"
-            '","F_ID")/"Area_AWA"',
+            "FORMULA": ' sum("' + parameters["fieldtoaverage"] + "_area"
+            '","input_feat_id")/"area_awa"',
             "INPUT": outputs["Add_Weight"]["OUTPUT"],
             "OUTPUT": QgsProcessing.TEMPORARY_OUTPUT,
         }
@@ -312,7 +313,7 @@ class AreaWeightedAverageAlgorithm(QgsProcessingAlgorithm):
 
         # remerge input layer elements
         alg_params = {
-            "FIELD": ["F_ID"],
+            "FIELD": ["input_feat_id"],
             "INPUT": outputs["area_average"]["OUTPUT"],
             "OUTPUT": QgsProcessing.TEMPORARY_OUTPUT,
         }
@@ -333,16 +334,15 @@ class AreaWeightedAverageAlgorithm(QgsProcessingAlgorithm):
         parameters["result"].destinationName = result_name
 
         # drop field(s) for Result
-        #
         alg_params = {
-            "COLUMN": ["F_ID", "Area_AWA"]
+            "COLUMN": ["input_feat_id", "area_awa"]
             + [parameters["fieldtoaverage"]]
             + [
                 field
                 for field in parameters["additionalfields"]
                 if field != str(parameters["fieldtoaverage"])
             ]
-            + [parameters["fieldtoaverage"] + "_Area"],
+            + [parameters["fieldtoaverage"] + "_area"],
             "INPUT": outputs["Dissolve2"]["OUTPUT"],
             "OUTPUT": parameters["result"],
         }
@@ -357,14 +357,11 @@ class AreaWeightedAverageAlgorithm(QgsProcessingAlgorithm):
 
         # Reporting
 
-        # in input layer for 'Drop field(s) for Report' add Area and area as %
-
-        # # Drop field(s) for Report
-
+        # Drop field(s) for Report
         int_layer = context.takeResultLayer(outputs["area_average"]["OUTPUT"])
         all_fields = [f.name() for f in int_layer.fields()]
         fields_to_keep = (
-            ["F_ID", weighted_field]
+            ["input_feat_id", weighted_field]
             + [
                 field
                 for field in parameters["additionalfields"]
@@ -393,11 +390,11 @@ class AreaWeightedAverageAlgorithm(QgsProcessingAlgorithm):
 
         # update area
         alg_params = {
-            "FIELD_LENGTH": 0,
-            "FIELD_NAME": "Area_CRS_Units",
-            "FIELD_PRECISION": 0,
+            "FIELD_LENGTH": 20,
+            "FIELD_NAME": "area_crs_units",
+            "FIELD_PRECISION": 5,
             "FIELD_TYPE": 0,
-            "FORMULA": "area($geometry)",
+            "FORMULA": "round(area($geometry),5)",
             "INPUT": outputs["Drop2"]["OUTPUT"],
             "OUTPUT": QgsProcessing.TEMPORARY_OUTPUT,
         }
@@ -416,13 +413,13 @@ class AreaWeightedAverageAlgorithm(QgsProcessingAlgorithm):
         parameters["reportaslayer"].destinationName = "Report as Layer"
         # add area %
         alg_params = {
-            "FIELD_LENGTH": 0,
-            "FIELD_NAME": "Area_Prcnt",
-            "FIELD_PRECISION": 0,
+            "FIELD_LENGTH": 9,
+            "FIELD_NAME": "area_prcnt",
+            "FIELD_PRECISION": 5,
             "FIELD_TYPE": 0,
-            "FORMULA": ' "Area_CRS_Units" *100/  sum(  "Area_CRS_Units" ,  "F_ID" )',
+            "FORMULA": ' round("area_crs_units" *100/  sum(  "area_crs_units" ,  "input_feat_id" ),5)',
             "INPUT": outputs["update_area"]["OUTPUT"],
-            "OUTPUT": parameters["reportaslayer"],
+            "OUTPUT": QgsProcessing.TEMPORARY_OUTPUT,
         }
         outputs["area_prcnt"] = processing.run(
             "qgis:fieldcalculator",
@@ -436,7 +433,23 @@ class AreaWeightedAverageAlgorithm(QgsProcessingAlgorithm):
         if feedback.isCanceled():
             return {}
 
-        results["reportaslayer"] = outputs["area_prcnt"]["OUTPUT"]
+        # Order by expression
+        alg_params = {
+            "ASCENDING": True,
+            "EXPRESSION": ' "input_feat_id" + area_prcnt" ',
+            "INPUT": outputs["area_prcnt"]["OUTPUT"],
+            "NULLS_FIRST": False,
+            "OUTPUT": parameters["reportaslayer"],
+        }
+        outputs["OrderByExpression"] = processing.run(
+            "native:orderbyexpression",
+            alg_params,
+            context=context,
+            feedback=feedback,
+            is_child_algorithm=True,
+        )
+
+        results["reportaslayer"] = outputs["OrderByExpression"]["OUTPUT"]
 
         output_file = self.parameterAsFileOutput(parameters, "reportasHTML", context)
 
@@ -447,6 +460,9 @@ class AreaWeightedAverageAlgorithm(QgsProcessingAlgorithm):
                 try:
                     import pandas as pd
                 except ImportError:
+                    feedback.pushInfo(
+                        "Python library pandas was not found. Installing pandas to QGIS python ..."
+                    )
                     import pathlib as pl
                     import subprocess
 
@@ -459,7 +475,7 @@ class AreaWeightedAverageAlgorithm(QgsProcessingAlgorithm):
                     import pandas as pd
 
                     feedback.pushInfo(
-                        "python library pandas was installed for qgis python"
+                        "Python library pandas was successfully installed for QGIS python"
                     )
             except:
                 feedback.reportError(
@@ -494,27 +510,30 @@ class AreaWeightedAverageAlgorithm(QgsProcessingAlgorithm):
                     fileEncoding="utf-8",
                     driverName="CSV",
                 )
+
                 df = pd.read_csv(f_name)
 
-            total_FIDs = df["F_ID"].max()
-
+            total_FIDs = df["input_feat_id"].max()
             ident_name = parameters["identifierfieldforreport"]
-            weighted_field = "Weighted_" + parameters["fieldtoaverage"]
             html = ""
+            df.sort_values(by="area_prcnt", ascending=False, inplace=True)
+            pd.set_option("display.float_format", "{:.5f}".format)
+
             for i in range(1, total_FIDs):
-                df_sub = df.loc[df["F_ID"] == i]
+                df_sub = df.loc[df["input_feat_id"] == i]
                 df_sub.reset_index(inplace=True, drop=True)
                 avg_value = df_sub.at[0, weighted_field]
                 if ident_name:
                     feature_name = df_sub.at[0, ident_name]
                     df_sub.drop(
-                        columns=["F_ID", ident_name, weighted_field], inplace=True
+                        columns=["input_feat_id", ident_name, weighted_field],
+                        inplace=True,
                     )
-                    html += f"<p><b>{i}. {feature_name}</b><br>{weighted_field}: {avg_value}<br>Count of intersecting features: {len(df_sub.index)}<br></p>\n"
+                    html += f"<p><b>{i}. {feature_name}</b><br>{weighted_field}: {avg_value}<br>count of distinct intersecting features: {len(df_sub.index)}<br></p>\n"
                 else:
-                    df_sub.drop(columns=["F_ID", weighted_field], inplace=True)
-                    html += f"<p><b>Feature ID: {i}</b><br>{weighted_field}: {avg_value}<br>Count of intersecting features: {len(df_sub.index)}<br></p>\n"
-                html += f"{df_sub.to_html(bold_rows=False, index=False)}<br>\n"
+                    df_sub.drop(columns=["input_feat_id", weighted_field], inplace=True)
+                    html += f"<p><b>Feature ID: {i}</b><br>{weighted_field}: {avg_value}<br>count of distinct intersecting features: {len(df_sub.index)}<br></p>\n"
+                html += f"{df_sub.to_html(bold_rows=False, index=False, justify='left')}<br>\n"
 
                 with codecs.open(output_file, "w", encoding="utf-8") as f:
                     f.write("<html><head>\n")
@@ -583,8 +602,34 @@ class AreaWeightedAverageAlgorithm(QgsProcessingAlgorithm):
 
     def icon(self):
         cmd_folder = os.path.split(inspect.getfile(inspect.currentframe()))[0]
-        icon = QIcon(os.path.join(os.path.join(cmd_folder, "logo.png")))
+        icon = QIcon(os.path.join(os.path.join(cmd_folder, "icon.png")))
         return icon
+
+    def shortHelpString(self):
+        return """<html><body><h2>Algorithm Description</h2>
+<p>This algorithm performs spatial area weighted average analysis on an input polygon layer given an attribute in the overlay polygon layer. Each feature in the input layer will be assigned a spatial area weighted average value of the overlay field. A report of the analysis is generated as a GIS Layer and as HTML.</p>
+<h2>Input Parameters</h2>
+<h3>Input Layer</h3>
+<p>Polygon layer for which area weighted average will be calculated.</p>
+<h3>Overlay Layer</h3>
+<p>Polygon layer overlapping the Input Layer.</p>
+<h3>Field to Average</h3>
+<p>Single numeric field in the Overlay Layer.</p>
+<h3>Identifier Field for Report [optional]</h3>
+<p>Name or ID field in the Input Layer. This field will be used to identify features in the report.</p>
+<h3>Additional Fields to Keep for Report</h3>
+<p>Fields in the Overlay Layer that will be included in the reports.</p>
+<h2>Outputs</h2>
+<h3>Result</h3>
+<p>Input layer but with the additional attribute of weighted value.</p>
+<h3>Report as Layer</h3>
+<p>Report as a GIS layer.</p>
+<h3>Report as HTML [optional]</h3>
+<p>Report containing feature-wise breakdown of the analysis.</p>
+<br><p align="right">Algorithm author: Abdul Raheem Siddiqui</p><p align="right">Help author: Abdul Raheem Siddiqui</p><p align="right">Algorithm version: 0.1</p><p align="right">Contact email: ars.work.ce@gmail.com</p></body></html>"""
+
+    def helpUrl(self):
+        return "mailto:ars.work.ce@gmail.com"
 
     def createHTML(self, outputFile, counter):
         with codecs.open(outputFile, "w", encoding="utf-8") as f:
