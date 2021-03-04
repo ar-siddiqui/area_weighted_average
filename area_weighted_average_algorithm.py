@@ -173,7 +173,7 @@ class AreaWeightedAverageAlgorithm(QgsProcessingAlgorithm):
     def processAlgorithm(self, parameters, context, model_feedback):
         # Use a multi-step feedback, so that individual child algorithm progress reports are adjusted for the
         # overall progress through the model
-        feedback = QgsProcessingMultiStepFeedback(7, model_feedback)
+        feedback = QgsProcessingMultiStepFeedback(13, model_feedback)
         results = {}
         outputs = {}
 
@@ -241,6 +241,10 @@ class AreaWeightedAverageAlgorithm(QgsProcessingAlgorithm):
             is_child_algorithm=True,
         )
 
+        feedback.setCurrentStep(3)
+        if feedback.isCanceled():
+            return {}
+
         # intersection between input and overlay layer
         # delete no field in input layer and all fields in overlay layer
         # except field to average and additional fields
@@ -261,7 +265,7 @@ class AreaWeightedAverageAlgorithm(QgsProcessingAlgorithm):
             is_child_algorithm=True,
         )
 
-        feedback.setCurrentStep(3)
+        feedback.setCurrentStep(4)
         if feedback.isCanceled():
             return {}
 
@@ -283,7 +287,7 @@ class AreaWeightedAverageAlgorithm(QgsProcessingAlgorithm):
             is_child_algorithm=True,
         )
 
-        feedback.setCurrentStep(4)
+        feedback.setCurrentStep(5)
         if feedback.isCanceled():
             return {}
 
@@ -307,7 +311,7 @@ class AreaWeightedAverageAlgorithm(QgsProcessingAlgorithm):
             is_child_algorithm=True,
         )
 
-        feedback.setCurrentStep(5)
+        feedback.setCurrentStep(6)
         if feedback.isCanceled():
             return {}
 
@@ -325,7 +329,7 @@ class AreaWeightedAverageAlgorithm(QgsProcessingAlgorithm):
             is_child_algorithm=True,
         )
 
-        feedback.setCurrentStep(6)
+        feedback.setCurrentStep(7)
         if feedback.isCanceled():
             return {}
 
@@ -353,6 +357,11 @@ class AreaWeightedAverageAlgorithm(QgsProcessingAlgorithm):
             feedback=feedback,
             is_child_algorithm=True,
         )
+
+        feedback.setCurrentStep(8)
+        if feedback.isCanceled():
+            return {}
+
         results["result"] = outputs["Drop1"]["OUTPUT"]
 
         # Reporting
@@ -384,7 +393,7 @@ class AreaWeightedAverageAlgorithm(QgsProcessingAlgorithm):
             is_child_algorithm=True,
         )
 
-        feedback.setCurrentStep(2)
+        feedback.setCurrentStep(9)
         if feedback.isCanceled():
             return {}
 
@@ -406,7 +415,7 @@ class AreaWeightedAverageAlgorithm(QgsProcessingAlgorithm):
             is_child_algorithm=True,
         )
 
-        feedback.setCurrentStep(6)
+        feedback.setCurrentStep(10)
         if feedback.isCanceled():
             return {}
 
@@ -429,7 +438,7 @@ class AreaWeightedAverageAlgorithm(QgsProcessingAlgorithm):
             is_child_algorithm=True,
         )
 
-        feedback.setCurrentStep(7)
+        feedback.setCurrentStep(11)
         if feedback.isCanceled():
             return {}
 
@@ -448,6 +457,10 @@ class AreaWeightedAverageAlgorithm(QgsProcessingAlgorithm):
             feedback=feedback,
             is_child_algorithm=True,
         )
+
+        feedback.setCurrentStep(12)
+        if feedback.isCanceled():
+            return {}
 
         results["reportaslayer"] = outputs["OrderByExpression"]["OUTPUT"]
 
@@ -496,6 +509,10 @@ class AreaWeightedAverageAlgorithm(QgsProcessingAlgorithm):
                 feedback=feedback,
                 is_child_algorithm=True,
             )
+
+        feedback.setCurrentStep(13)
+        if feedback.isCanceled():
+            return {}
 
             with tempfile.TemporaryDirectory() as td:
                 f_name = os.path.join(td, "report_df.csv")
