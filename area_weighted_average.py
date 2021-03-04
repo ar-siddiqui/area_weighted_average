@@ -61,7 +61,7 @@ class AreaWeightedAveragePlugin(object):
     def initGui(self):
         self.initProcessing()
 
-        icon = os.path.join(os.path.join(cmd_folder, "logo.png"))
+        icon = os.path.join(os.path.join(cmd_folder, "icon.png"))
         self.action = QAction(
             QIcon(icon), u"Area Weighted Average", self.iface.mainWindow()
         )
