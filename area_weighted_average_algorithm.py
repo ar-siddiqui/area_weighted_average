@@ -39,11 +39,6 @@ import codecs
 
 from tempfile import NamedTemporaryFile
 
-from cust_functions import (
-    check_avail_plugin_version,
-    upgradeMessage,
-)
-
 from qgis.PyQt.QtGui import QIcon
 from qgis.PyQt.QtCore import QCoreApplication
 from qgis.core import (
@@ -64,6 +59,11 @@ from qgis.core import (
 
 cmd_folder = os.path.split(inspect.getfile(inspect.currentframe()))[0]
 sys.path.append(cmd_folder)
+
+from cust_functions_awa import (
+    check_avail_plugin_version,
+    upgradeMessage,
+)
 
 curr_version = "0.2"
 
