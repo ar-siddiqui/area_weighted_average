@@ -38,6 +38,12 @@ import processing
 import codecs
 
 from tempfile import NamedTemporaryFile
+
+from cust_functions import (
+    check_avail_plugin_version,
+    upgradeMessage,
+)
+
 from qgis.PyQt.QtGui import QIcon
 from qgis.PyQt.QtCore import QCoreApplication
 from qgis.core import (
@@ -58,6 +64,8 @@ from qgis.core import (
 
 cmd_folder = os.path.split(inspect.getfile(inspect.currentframe()))[0]
 sys.path.append(cmd_folder)
+
+curr_version = "0.2"
 
 
 class AreaWeightedAverageAlgorithm(QgsProcessingAlgorithm):
@@ -169,6 +177,14 @@ class AreaWeightedAverageAlgorithm(QgsProcessingAlgorithm):
         # check if counter is milestone
         if (counter + 1) % 25 == 0:
             self.addOutput(QgsProcessingOutputHtml("Message", "Area Weighted Average"))
+
+        # check if new version is available of the plugin
+        try:  # try except because this is not a critical part
+            avail_version = check_avail_plugin_version("Area Weighted Average")
+            if avail_version != curr_version:
+                upgradeMessage()
+        except:
+            pass
 
     def processAlgorithm(self, parameters, context, model_feedback):
         # Use a multi-step feedback, so that individual child algorithm progress reports are adjusted for the
