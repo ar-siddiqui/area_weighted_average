@@ -93,7 +93,7 @@ class AreaWeightedAverageAlgorithm(QgsProcessingAlgorithm):
         self.addParameter(
             QgsProcessingParameterVectorLayer(
                 "inputlayer",
-                "Input Layer",
+                "Input Layer (Destination)",
                 types=[QgsProcessing.TypeVectorPolygon],
                 defaultValue=None,
             )
@@ -101,7 +101,7 @@ class AreaWeightedAverageAlgorithm(QgsProcessingAlgorithm):
         self.addParameter(
             QgsProcessingParameterVectorLayer(
                 "overlaylayer",
-                "Overlay Layer",
+                "Overlay Layer (Data Source)",
                 types=[QgsProcessing.TypeVectorPolygon],
                 defaultValue=None,
             )
@@ -639,13 +639,14 @@ class AreaWeightedAverageAlgorithm(QgsProcessingAlgorithm):
         return icon
 
     def shortHelpString(self):
-        return """<html><body><h2>Algorithm Description</h2>
-<p>This algorithm performs spatial area weighted average analysis on an input polygon layer given an attribute in the overlay polygon layer. Each feature in the input layer will be assigned a spatial area weighted average value of the overlay field. A report of the analysis is generated as a GIS Layer and as HTML.</p>
+        return """<html><body><h3><a "href"="https://github.com/ar-siddiqui/area_weighted_average/wiki/Tutorials">Video Tutorials</a></h3>
+<h2>Algorithm Description</h2>
+<p>This algorithm calculates attribute value by performing spatial area weighted average analysis on an input polygon layer given an attribute in the overlay polygon layer. Each feature in the input layer will be assigned a spatial area weighted average value of the overlay field. A report of the analysis is generated as a GIS Layer and as HTML.</p>
 <h2>Input Parameters</h2>
 <h3>Input Layer</h3>
 <p>Polygon layer for which area weighted average will be calculated.</p>
 <h3>Overlay Layer</h3>
-<p>Polygon layer overlapping the Input Layer.</p>
+<p>Polygon layer with source data. Must overlap the Input Layer.</p>
 <h3>Field to Average</h3>
 <p>Single numeric field in the Overlay Layer.</p>
 <h3>Identifier Field for Report [optional]</h3>
