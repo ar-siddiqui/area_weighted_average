@@ -552,7 +552,7 @@ class AreaWeightedAverageAlgorithm(QgsProcessingAlgorithm):
             df.sort_values(by="area_prcnt", ascending=False, inplace=True)
             pd.set_option("display.float_format", "{:.5f}".format)
 
-            for i in range(1, total_FIDs):
+            for i in range(1, total_FIDs + 1):
                 df_sub = df.loc[df["input_feat_id"] == i]
                 df_sub.reset_index(inplace=True, drop=True)
                 avg_value = df_sub.at[0, weighted_field]
