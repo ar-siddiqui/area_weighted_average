@@ -55,6 +55,7 @@ from qgis.core import (
     QgsProcessingParameterFileDestination,
     QgsVectorFileWriter,
     QgsProcessingOutputHtml,
+    QgsCoordinateReferenceSystem,
 )
 
 cmd_folder = os.path.split(inspect.getfile(inspect.currentframe()))[0]
@@ -192,6 +193,51 @@ class AreaWeightedAverageAlgorithm(QgsProcessingAlgorithm):
         feedback = QgsProcessingMultiStepFeedback(13, model_feedback)
         results = {}
         outputs = {}
+
+        input_layer = self.parameterAsVectorLayer(parameters, "inputlayer", context)
+        overlay_layer = self.parameterAsVectorLayer(parameters, "overlaylayer", context)
+
+        input_epsg_code = input_layer.crs().authid()
+        overlay_epsg_code = overlay_layer.crs().authid()
+
+        crs_input = QgsCoordinateReferenceSystem(input_epsg_code)
+        crs_overlay = QgsCoordinateReferenceSystem(overlay_epsg_code)
+
+        if crs_input.isGeographic():
+            feedback.reportError(
+                "CRS of the Input Layer is Geographic. Results accuracy may get impacted. For most accurate results, both input and overlay layers should be in the same Projected CRS"
+            )
+
+        if crs_overlay.isGeographic():
+            feedback.reportError(
+                "CRS of the Input Layer is Geographic. Results accuracy may get impacted. For most accurate results, both input and overlay layers should be in the same Projected CRS"
+            )
+
+        if input_epsg_code == overlay_epsg_code:
+            pass
+        else:
+            feedback.reportError(
+                "Input and Overlay Layers are in different CRS. For most accurate results, both input and overlay layers should be in the same Projected CRS"
+            )
+
+            # # Reproject Input layer to overlay CRS
+            # # this is required because by default overlay layer
+            # alg_params = {
+            #     "INPUT": parameters["areaboundary"],
+            #     "OPERATION": "",
+            #     "TARGET_CRS": QgsCoordinateReferenceSystem("EPSG:5070"),
+            #     "OUTPUT": QgsProcessing.TEMPORARY_OUTPUT,
+            # }
+            # outputs["ReprojectLayer5070"] = processing.run(
+            #     "native:reprojectlayer",
+            #     alg_params,
+            #     context=context,
+            #     feedback=feedback,
+            #     is_child_algorithm=True,
+            # )
+            # area_layer = context.takeResultLayer(
+            #     outputs["ReprojectLayer5070"]["OUTPUT"]
+            # )
 
         # add_ID_field to input layer
         alg_params = {
