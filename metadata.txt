@@ -20,7 +20,10 @@ repository=https://github.com/ar-siddiqui/area_weighted_average
 
 hasProcessingProvider=yes
 # Uncomment the following line and add your changelog:
-# changelog=
+changelog=  Version 0.2 - 2021-06-25
+	- Fix bug that was causing last feature to drop in HTML report
+    - Warn users about different CRS
+    - Warn users about geographic CRS
 
 # Tags are comma separated with spaces allowed
 tags=weighted, spatial, average, mean, analysis, report, overlap, spatial join, area, mean, zonal statistics
