@@ -32,7 +32,7 @@ homepage=https://github.com/ar-siddiqui/area_weighted_average
 category=Analysis
 icon=icon.png
 # experimental flag
-experimental=True
+experimental=False
 
 # deprecated flag (applies to the whole plugin, not just a single version)
 deprecated=False
