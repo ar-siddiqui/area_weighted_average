@@ -6,7 +6,7 @@
 name=Area Weighted Average
 qgisMinimumVersion=3.6
 description=Area Weighted Average.
-version=0.1
+version=0.2
 author=Abdul Raheem Siddiqui
 email=ars.work.ce@gmail.com
 
@@ -20,16 +20,19 @@ repository=https://github.com/ar-siddiqui/area_weighted_average
 
 hasProcessingProvider=yes
 # Uncomment the following line and add your changelog:
-# changelog=
+changelog=  Version 0.2 - 2021-06-25
+	- Fix bug that was causing last feature to drop in HTML report
+    - Warn users about different CRS
+    - Warn users about geographic CRS
 
 # Tags are comma separated with spaces allowed
-tags=weighted, spatial, average, mean, analysis, report, overlap, spatial join, area, mean
+tags=weighted, spatial, average, mean, analysis, report, overlap, spatial join, area, mean, zonal statistics
 
 homepage=https://github.com/ar-siddiqui/area_weighted_average
 category=Analysis
 icon=icon.png
 # experimental flag
-experimental=True
+experimental=False
 
 # deprecated flag (applies to the whole plugin, not just a single version)
 deprecated=False

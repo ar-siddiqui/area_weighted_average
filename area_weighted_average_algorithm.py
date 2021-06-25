@@ -23,7 +23,7 @@
 """
 
 __author__ = "Abdul Raheem Siddiqui"
-__date__ = "2021-02-21"
+__date__ = "2021-06-25"
 __copyright__ = "(C) 2021 by Abdul Raheem Siddiqui"
 
 # This will get replaced with a git SHA1 when you do a git archive
@@ -38,6 +38,7 @@ import processing
 import codecs
 
 from tempfile import NamedTemporaryFile
+
 from qgis.PyQt.QtGui import QIcon
 from qgis.PyQt.QtCore import QCoreApplication
 from qgis.core import (
@@ -54,10 +55,18 @@ from qgis.core import (
     QgsProcessingParameterFileDestination,
     QgsVectorFileWriter,
     QgsProcessingOutputHtml,
+    QgsCoordinateReferenceSystem,
 )
 
 cmd_folder = os.path.split(inspect.getfile(inspect.currentframe()))[0]
 sys.path.append(cmd_folder)
+
+from cust_functions_awa import (
+    check_avail_plugin_version,
+    upgradeMessage,
+)
+
+curr_version = "0.2"
 
 
 class AreaWeightedAverageAlgorithm(QgsProcessingAlgorithm):
@@ -93,7 +102,7 @@ class AreaWeightedAverageAlgorithm(QgsProcessingAlgorithm):
         self.addParameter(
             QgsProcessingParameterVectorLayer(
                 "overlaylayer",
-                "Overlay Layer",
+                "Overlay Layer (Data Source)",
                 types=[QgsProcessing.TypeVectorPolygon],
                 defaultValue=None,
             )
@@ -170,12 +179,47 @@ class AreaWeightedAverageAlgorithm(QgsProcessingAlgorithm):
         if (counter + 1) % 25 == 0:
             self.addOutput(QgsProcessingOutputHtml("Message", "Area Weighted Average"))
 
+        # check if new version is available of the plugin
+        if (counter + 1) % 4 == 0:
+            try:  # try except because this is not a critical part
+                avail_version = check_avail_plugin_version("Area Weighted Average")
+                if avail_version != curr_version and avail_version:
+                    upgradeMessage()
+            except:
+                pass
+
     def processAlgorithm(self, parameters, context, model_feedback):
         # Use a multi-step feedback, so that individual child algorithm progress reports are adjusted for the
         # overall progress through the model
         feedback = QgsProcessingMultiStepFeedback(13, model_feedback)
         results = {}
         outputs = {}
+
+        input_layer = self.parameterAsVectorLayer(parameters, "inputlayer", context)
+        overlay_layer = self.parameterAsVectorLayer(parameters, "overlaylayer", context)
+
+        input_epsg_code = input_layer.crs().authid()
+        overlay_epsg_code = overlay_layer.crs().authid()
+
+        crs_input = QgsCoordinateReferenceSystem(input_epsg_code)
+        crs_overlay = QgsCoordinateReferenceSystem(overlay_epsg_code)
+
+        if crs_input.isGeographic():
+            feedback.reportError(
+                "CRS of the Input Layer is Geographic. Results accuracy may get impacted. For most accurate results, both input and overlay layers should be in the same Projected CRS\n"
+            )
+
+        if crs_overlay.isGeographic():
+            feedback.reportError(
+                "CRS of the Input Layer is Geographic. Results accuracy may get impacted. For most accurate results, both input and overlay layers should be in the same Projected CRS\n"
+            )
+
+        if input_epsg_code == overlay_epsg_code:
+            pass
+        else:
+            feedback.reportError(
+                "Input and Overlay Layers are in different CRS. For most accurate results, both input and overlay layers should be in the same Projected CRS\n"
+            )
 
         # add_ID_field to input layer
         alg_params = {
@@ -536,7 +580,7 @@ class AreaWeightedAverageAlgorithm(QgsProcessingAlgorithm):
             df.sort_values(by="area_prcnt", ascending=False, inplace=True)
             pd.set_option("display.float_format", "{:.5f}".format)
 
-            for i in range(1, total_FIDs):
+            for i in range(1, total_FIDs + 1):
                 df_sub = df.loc[df["input_feat_id"] == i]
                 df_sub.reset_index(inplace=True, drop=True)
                 avg_value = df_sub.at[0, weighted_field]
@@ -623,29 +667,30 @@ class AreaWeightedAverageAlgorithm(QgsProcessingAlgorithm):
         return icon
 
     def shortHelpString(self):
-        return """<html><body><h2>Algorithm Description</h2>
-<p>This algorithm performs spatial area weighted average analysis on an input polygon layer given an attribute in the overlay polygon layer. Each feature in the input layer will be assigned a spatial area weighted average value of the overlay field. A report of the analysis is generated as a GIS Layer and as HTML.</p>
+        return """<html><body><h3><a "href"="https://github.com/ar-siddiqui/area_weighted_average/wiki/Tutorials">Video Tutorials</a></h3>
+<h2>Algorithm Description</h2>
+<p>This algorithm calculates attribute value by performing spatial area weighted average analysis on an input polygon layer given an attribute in the overlay polygon layer. Each feature in the input layer will be assigned a spatial area weighted average value of the overlay field. A report of the analysis is generated as a GIS Layer and as HTML.</p>
 <h2>Input Parameters</h2>
 <h3>Input Layer</h3>
 <p>Polygon layer for which area weighted average will be calculated.</p>
 <h3>Overlay Layer</h3>
-<p>Polygon layer overlapping the Input Layer.</p>
+<p>Polygon layer with source data. Must overlap the Input Layer.</p>
 <h3>Field to Average</h3>
 <p>Single numeric field in the Overlay Layer.</p>
 <h3>Identifier Field for Report [optional]</h3>
 <p>Name or ID field in the Input Layer. This field will be used to identify features in the report.</p>
-<h3>Additional Fields to Keep for Report</h3>
+<h3>Additional Fields to Keep for Report [optional]</h3>
 <p>Fields in the Overlay Layer that will be included in the reports.</p>
 <h2>Outputs</h2>
 <h3>Result</h3>
-<p>Input layer but with the additional attribute of weighted value.</p>
+<p>Input layer but with the additional attribute of field to average.</p>
 <h3>Report as Layer</h3>
-<p>Report as a GIS layer.</p>
+<p>Report of the analysis as a GIS layer.</p>
 <h3>Report as HTML [optional]</h3>
-<p>Report containing feature-wise breakdown of the analysis.</p>
+<p>Report of the analysis as text tables.</p>
 <p align="right">Algorithm author: Abdul Raheem Siddiqui</p>
 <p align="right">Help author: Abdul Raheem Siddiqui</p>
-<p align="right">Algorithm version: 0.1</p>
+<p align="right">Algorithm version: 0.2</p>
 <p align="right">Contact email: ars.work.ce@gmail.com</p>
 <p>** If the python library pandas is not installed on the QGIS installation of python; this algorithm will try to install pandas library to the QGIS installation of python.</p>
 </body></html>"""
