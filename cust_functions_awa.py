@@ -19,6 +19,7 @@ def check_avail_plugin_version(plugin_name: str) -> str:
             experimental = plugin.find("experimental").text
             if experimental == "False":
                 return plugin.find("version").text
+    return None
 
 
 def installPlugin():

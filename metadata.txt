@@ -6,7 +6,7 @@
 name=Area Weighted Average
 qgisMinimumVersion=3.6
 description=Area Weighted Average.
-version=0.1
+version=0.2
 author=Abdul Raheem Siddiqui
 email=ars.work.ce@gmail.com
 
@@ -23,7 +23,7 @@ hasProcessingProvider=yes
 # changelog=
 
 # Tags are comma separated with spaces allowed
-tags=weighted, spatial, average, mean, analysis, report, overlap, spatial join, area, mean
+tags=weighted, spatial, average, mean, analysis, report, overlap, spatial join, area, mean, zonal statistics
 
 homepage=https://github.com/ar-siddiqui/area_weighted_average
 category=Analysis

@@ -23,7 +23,7 @@
 """
 
 __author__ = "Abdul Raheem Siddiqui"
-__date__ = "2021-02-21"
+__date__ = "2021-06-25"
 __copyright__ = "(C) 2021 by Abdul Raheem Siddiqui"
 
 # This will get replaced with a git SHA1 when you do a git archive
@@ -94,7 +94,7 @@ class AreaWeightedAverageAlgorithm(QgsProcessingAlgorithm):
         self.addParameter(
             QgsProcessingParameterVectorLayer(
                 "inputlayer",
-                "Input Layer (Destination)",
+                "Input Layer",
                 types=[QgsProcessing.TypeVectorPolygon],
                 defaultValue=None,
             )
@@ -180,12 +180,13 @@ class AreaWeightedAverageAlgorithm(QgsProcessingAlgorithm):
             self.addOutput(QgsProcessingOutputHtml("Message", "Area Weighted Average"))
 
         # check if new version is available of the plugin
-        try:  # try except because this is not a critical part
-            avail_version = check_avail_plugin_version("Area Weighted Average")
-            if avail_version != curr_version:
-                upgradeMessage()
-        except:
-            pass
+        if (counter + 1) % 4 == 0:
+            try:  # try except because this is not a critical part
+                avail_version = check_avail_plugin_version("Area Weighted Average")
+                if avail_version != curr_version and avail_version:
+                    upgradeMessage()
+            except:
+                pass
 
     def processAlgorithm(self, parameters, context, model_feedback):
         # Use a multi-step feedback, so that individual child algorithm progress reports are adjusted for the
@@ -205,39 +206,20 @@ class AreaWeightedAverageAlgorithm(QgsProcessingAlgorithm):
 
         if crs_input.isGeographic():
             feedback.reportError(
-                "CRS of the Input Layer is Geographic. Results accuracy may get impacted. For most accurate results, both input and overlay layers should be in the same Projected CRS"
+                "CRS of the Input Layer is Geographic. Results accuracy may get impacted. For most accurate results, both input and overlay layers should be in the same Projected CRS\n"
             )
 
         if crs_overlay.isGeographic():
             feedback.reportError(
-                "CRS of the Input Layer is Geographic. Results accuracy may get impacted. For most accurate results, both input and overlay layers should be in the same Projected CRS"
+                "CRS of the Input Layer is Geographic. Results accuracy may get impacted. For most accurate results, both input and overlay layers should be in the same Projected CRS\n"
             )
 
         if input_epsg_code == overlay_epsg_code:
             pass
         else:
             feedback.reportError(
-                "Input and Overlay Layers are in different CRS. For most accurate results, both input and overlay layers should be in the same Projected CRS"
+                "Input and Overlay Layers are in different CRS. For most accurate results, both input and overlay layers should be in the same Projected CRS\n"
             )
-
-            # # Reproject Input layer to overlay CRS
-            # # this is required because by default overlay layer
-            # alg_params = {
-            #     "INPUT": parameters["areaboundary"],
-            #     "OPERATION": "",
-            #     "TARGET_CRS": QgsCoordinateReferenceSystem("EPSG:5070"),
-            #     "OUTPUT": QgsProcessing.TEMPORARY_OUTPUT,
-            # }
-            # outputs["ReprojectLayer5070"] = processing.run(
-            #     "native:reprojectlayer",
-            #     alg_params,
-            #     context=context,
-            #     feedback=feedback,
-            #     is_child_algorithm=True,
-            # )
-            # area_layer = context.takeResultLayer(
-            #     outputs["ReprojectLayer5070"]["OUTPUT"]
-            # )
 
         # add_ID_field to input layer
         alg_params = {
@@ -697,18 +679,18 @@ class AreaWeightedAverageAlgorithm(QgsProcessingAlgorithm):
 <p>Single numeric field in the Overlay Layer.</p>
 <h3>Identifier Field for Report [optional]</h3>
 <p>Name or ID field in the Input Layer. This field will be used to identify features in the report.</p>
-<h3>Additional Fields to Keep for Report</h3>
+<h3>Additional Fields to Keep for Report [optional]</h3>
 <p>Fields in the Overlay Layer that will be included in the reports.</p>
 <h2>Outputs</h2>
 <h3>Result</h3>
-<p>Input layer but with the additional attribute of weighted value.</p>
+<p>Input layer but with the additional attribute of field to average.</p>
 <h3>Report as Layer</h3>
-<p>Report as a GIS layer.</p>
+<p>Report of the analysis as a GIS layer.</p>
 <h3>Report as HTML [optional]</h3>
-<p>Report containing feature-wise breakdown of the analysis.</p>
+<p>Report of the analysis as text tables.</p>
 <p align="right">Algorithm author: Abdul Raheem Siddiqui</p>
 <p align="right">Help author: Abdul Raheem Siddiqui</p>
-<p align="right">Algorithm version: 0.1</p>
+<p align="right">Algorithm version: 0.2</p>
 <p align="right">Contact email: ars.work.ce@gmail.com</p>
 <p>** If the python library pandas is not installed on the QGIS installation of python; this algorithm will try to install pandas library to the QGIS installation of python.</p>
 </body></html>"""

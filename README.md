@@ -20,7 +20,7 @@ This algorithm calculates attribute value by performing spatial area weighted av
 - Identifier Field for Report [optional]:  
     Name or ID field in the Input Layer. This field will be used to identify features in the report.
 
-- Additional Fields to Keep for Report:  
+- Additional Fields to Keep for Report [optional]:  
     Fields in the Overlay Layer that will be included in the reports.  
   
 ## Outputs
@@ -38,7 +38,7 @@ This algorithm calculates attribute value by performing spatial area weighted av
 
 Algorithm author: Abdul Raheem Siddiqui  
 Help author: Abdul Raheem Siddiqui  
-Algorithm version: 0.1  
+Algorithm version: 0.2  
 Contact email: ars.work.ce@gmail.com
 
 ## Donate
