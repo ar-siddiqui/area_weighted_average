@@ -4,7 +4,7 @@
 Plugin to perform Area Weighted Average analysis in QGIS.
 
 ## Algorithm Description
-This algorithm calculates attribute value by performing spatial area weighted average analysis on an input polygon layer given an attribute in the overlay polygon layer. Each feature in the input layer will be assigned a spatial area weighted average value of the overlay field. A report of the analysis is generated as a GIS Layer and as HTML.
+This algorithm calculates weighted average by performing spatial area weighted average analysis on an input polygon layer given an attribute in the overlay polygon layer. Each feature in the input layer will be assigned a spatial area weighted average value of the overlay field. A report of the analysis is generated as a GIS Layer and as HTML.
 
 ## Input Parameters
 
