@@ -41,6 +41,10 @@ Help author: Abdul Raheem Siddiqui
 Algorithm version: 0.2  
 Contact email: ars.work.ce@gmail.com
 
+## Citation
+Siddiqui, Abdul Raheem. 2021. “Area-Weighted-Average: Plugin to perform Area Weighted Average analysis in QGIS.” Accessed [Month Year] at https://github.com/ar-siddiqui/area_weighted_average.
+
+
 ## Donate
   
  <p>If this plugin is useful for you, please consider making a donation of any value to the developer.</p>
