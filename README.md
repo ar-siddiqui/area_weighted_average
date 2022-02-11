@@ -3,6 +3,9 @@
 # Area-Weighted-Average
 Plugin to perform Area Weighted Average analysis in QGIS.
 
+## Installation
+Area Weighted Average Plugin can be downloaded from from official QGIS plugin repository or from https://github.com/ar-siddiqui/area_weighted_average/releases
+
 ## Algorithm Description
 This algorithm calculates weighted average by performing spatial area weighted average analysis on an input polygon layer given an attribute in the overlay polygon layer. Each feature in the input layer will be assigned a spatial area weighted average value of the overlay field. A report of the analysis is generated as a GIS Layer and as HTML.
 
