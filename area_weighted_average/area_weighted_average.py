@@ -30,17 +30,16 @@ __copyright__ = "(C) 2021 by Abdul Raheem Siddiqui"
 
 __revision__ = "$Format:%H$"
 
-from qgis.PyQt.QtWidgets import QAction
-from qgis.PyQt.QtGui import QIcon
-
-from qgis.core import QgsProcessingAlgorithm, QgsApplication
-import processing
+import inspect
 import os
 import sys
-import inspect
 
-from qgis.core import QgsProcessingAlgorithm, QgsApplication
-from .area_weighted_average_provider import AreaWeightedAverageProvider
+import processing
+from qgis.core import QgsApplication, QgsProcessingAlgorithm
+from qgis.PyQt.QtGui import QIcon
+from qgis.PyQt.QtWidgets import QAction
+
+from area_weighted_average.processing import AreaWeightedAverageProvider
 
 cmd_folder = os.path.split(inspect.getfile(inspect.currentframe()))[0]
 
@@ -62,15 +61,13 @@ class AreaWeightedAveragePlugin(object):
         self.initProcessing()
 
         icon = os.path.join(os.path.join(cmd_folder, "icon.png"))
-        self.action = QAction(
-            QIcon(icon), u"Area Weighted Average", self.iface.mainWindow()
-        )
+        self.action = QAction(QIcon(icon), "Area Weighted Average", self.iface.mainWindow())
         self.action.triggered.connect(self.run)
-        self.iface.addPluginToMenu(u"&Area Weighted Average", self.action)
+        self.iface.addPluginToMenu("&Area Weighted Average", self.action)
 
     def unload(self):
         QgsApplication.processingRegistry().removeProvider(self.provider)
-        self.iface.removePluginMenu(u"&Area Weighted Average", self.action)
+        self.iface.removePluginMenu("&Area Weighted Average", self.action)
 
     def run(self):
         processing.execAlgorithmDialog("Area Weighted Average:Area Weighted Average")

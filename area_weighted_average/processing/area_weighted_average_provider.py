@@ -83,14 +83,9 @@ class AreaWeightedAverageProvider(QgsProcessingProvider):
         the Processing toolbox.
         """
         cmd_folder = os.path.split(inspect.getfile(inspect.currentframe()))[0]
-        icon = QIcon(os.path.join(os.path.join(cmd_folder, "icon.png")))
+        icon = QIcon(os.path.join(os.path.join(os.path.dirname(cmd_folder), "icon.png")))
         return icon
 
     def longName(self):
-        """
-        Returns the a longer version of the provider name, which can include
-        extra details such as version numbers. E.g. "Lastools LIDAR tools
-        (version 2.2.1)". This string should be localised. The default
-        implementation returns the same string as name().
-        """
+        """ """
         return self.name()
