@@ -6,7 +6,7 @@
 name=Area Weighted Average
 qgisMinimumVersion=3.6
 description=Area Weighted Average.
-version=0.2
+version=0.2.1
 author=Abdul Raheem Siddiqui
 email=ars.work.ce@gmail.com
 
@@ -20,7 +20,9 @@ repository=https://github.com/ar-siddiqui/area_weighted_average
 
 hasProcessingProvider=yes
 # Uncomment the following line and add your changelog:
-changelog=  Version 0.2 - 2021-06-25
+changelog=  Version 0.2.1 - 2023-10-18
+	- Fix folder structure
+    Version 0.2 - 2021-06-25
 	- Fix bug that was causing last feature to drop in HTML report
     - Warn users about different CRS
     - Warn users about geographic CRS
